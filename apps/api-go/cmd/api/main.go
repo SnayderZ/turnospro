@@ -1,8 +1,7 @@
-// apps/api-go/cmd/api/main.go (fragmento relevante)
+// apps/api-go/cmd/api/main.go
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -10,7 +9,7 @@ import (
 	"os"
 
 	"turnospro/api-go/internal/auth"
-	"turnospro/api-go/internal/db"
+	"turnospro/api-go/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -18,16 +17,24 @@ import (
 )
 
 func main() {
-	_ = godotenv.Load("../../../../.env") // si no está, toma variables del sistema
-
-	dbURL := os.Getenv("DB_URL")
-	if dbURL == "" {
-		log.Fatal("❌ ERROR: no se encontró DB_URL")
+	// 🧩 1️⃣ Intentar cargar el archivo .env desde varias ubicaciones comunes
+	err := godotenv.Load(
+		"../../../../.env",
+	)
+	if err != nil {
+		log.Println("⚠️ No se encontró archivo .env, usando variables del sistema...")
 	}
 
+	// 🧩 2️⃣ Verificar la variable DB_URL
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("❌ ERROR: no se encontró la variable DB_URL (verifica tu .env)")
+	}
+
+	// 🧩 3️⃣ Conexión a la base de datos
 	database, err := sql.Open("pgx", dbURL)
 	if err != nil {
-		log.Fatal("❌ Error al abrir BD:", err)
+		log.Fatal("❌ Error al abrir conexión con BD:", err)
 	}
 	defer database.Close()
 
@@ -36,17 +43,20 @@ func main() {
 	}
 	fmt.Println("✅ Conectado correctamente a PostgreSQL")
 
-	// (opcional) ejemplo de uso de sqlc para que veas que compila
-	_ = db.New(database)
-	_ = context.Background()
-
-	// ==== Servidor HTTP ====
+	// 🧩 4️⃣ Inicialización de rutas y servidor
 	r := gin.Default()
 
-	// Rutas de autenticación
+	// Registrar rutas de autenticación
 	auth.RegisterRoutes(r, database)
 
-	// Health check
+	// ====== Rutas protegidas 🔒 ======
+	protected := r.Group("/api/protected")
+	protected.Use(middleware.JWTAuthMiddleware())
+	{
+		protected.GET("/profile", auth.ProfileHandler)
+	}
+
+	// Ruta de prueba (health check)
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Servidor activo 🚀"})
 	})

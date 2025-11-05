@@ -52,4 +52,23 @@ func RegisterRoutes(r *gin.Engine, dbConn *sql.DB) {
 		}
 		c.JSON(http.StatusOK, gin.H{"token": token})
 	})
+
+}
+
+// ProfileHandler muestra el perfil del usuario autenticado
+func ProfileHandler(c *gin.Context) {
+	userIDRaw, _ := c.Get("user_id")
+	email, _ := c.Get("email")
+
+	var userID int
+	if userIDRaw != nil {
+		// JWT guarda números como float64, hay que convertirlos
+		userID = int(userIDRaw.(float64))
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Bienvenido a tu perfil 🔒",
+		"user_id": userID,
+		"email":   email,
+	})
 }

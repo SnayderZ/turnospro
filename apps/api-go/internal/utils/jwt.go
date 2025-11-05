@@ -18,12 +18,16 @@ func secretKey() []byte {
 
 // GenerarToken crea un JWT HS256 que expira en 2 horas.
 // Guardamos claims mínimos: email y rol (útiles para autorización).
-func GenerarToken(email string, rol string) (string, error) {
-	claims := jwt.MapClaims{ // mapa de claims (contenido del token)
-		"email": email,                                // quién es el usuario
-		"rol":   rol,                                  // qué rol tiene (admin/operador)
-		"exp":   time.Now().Add(2 * time.Hour).Unix(), // fecha de expiración (UNIX)
+func GenerarToken(id int32, email, rol string) (string, error) {
+	secretKey := []byte(os.Getenv("JWT_SECRET"))
+
+	claims := jwt.MapClaims{
+		"user_id": id, // ✅ agregamos el id del usuario
+		"email":   email,
+		"rol":     rol,
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims) // token HS256
-	return token.SignedString(secretKey())                     // firmar con clave secreta
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(secretKey)
 }

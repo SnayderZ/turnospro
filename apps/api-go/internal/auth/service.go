@@ -48,7 +48,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 		return "", errors.New("contraseña incorrecta")
 	}
 	// 3) Generar token JWT con email y rol
-	token, err := utils.GenerarToken(user.Email, user.Rol)
+	token, err := utils.GenerarToken(int32(user.ID), user.Email, user.Rol)
 	if err != nil {
 		return "", err
 	}
